@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>버스 정류장 데이터 분석 보고서 (파주시 예시)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        #map {
+            height: 500px;
+            width: 100%;
+            margin-bottom: 30px;
+            border: 1px solid #ccc;
+        }
+        .chart-container {
+            width: 90%;
+            max-width: 700px;
+            margin: 20px auto;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #777;
+        }
+    </style>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+    <!-- Chart.js JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🚌 버스 정류장 데이터 분석 보고서 (파주시 예시)</h1>
+        <p>본 보고서는 제공된 버스 정류장 데이터를 기반으로 시각화한 자료입니다. 데이터 분석 수업의 예시로 활용될 수 있습니다.</p>
+
+        <h2>1. 데이터 샘플</h2>
+        <p>아래는 분석에 사용된 데이터의 일부 샘플입니다. (실제 데이터는 이미지 전체를 포함합니다)</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>회사명</th>
+                    <th>노선번호</th>
+                    <th>정류장명</th>
+                    <th>위도</th>
+                    <th>경도</th>
+                    <th>첫차</th>
+                    <th>막차</th>
+                    <th>배차간격</th>
+                </tr>
+            </thead>
+            <tbody id="sampleDataTable">
+                <!-- 데이터는 JavaScript로 채워집니다 -->
+            </tbody>
+        </table>
+
+        <h2>2. 정류장 분포 지도</h2>
+        <p>파주시 내 버스 정류장의 지리적 분포를 보여줍니다. 지도 위의 마커를 클릭하면 정류장 정보를 확인할 수 있습니다.</p>
+        <div id="map"></div>
+
+        <h2>3. 회사별 운영 정류장 수</h2>
+        <p>각 버스 회사가 운영하는 정류장의 수를 비교한 막대 그래프입니다.</p>
+        <div class="chart-container">
+            <canvas id="companyStopChart"></canvas>
+        </div>
+
+        <h2>4. 분석 결과 및 추가 제안</h2>
+        <p>
+            위 시각화를 통해 파주시 버스 정류장의 분포 현황과 회사별 운영 규모를 파악할 수 있습니다.
+            학생들은 이 데이터를 활용하여 다음과 같은 추가 분석을 진행해볼 수 있습니다:
+        </p>
+        <ul>
+            <li>특정 노선 번호의 경로 시각화</li>
+            <li>첫차/막차 시간 분포 분석 (예: 히스토그램)</li>
+            <li>배차 간격에 따른 사용자 편의성 분석</li>
+            <li>정류장 밀집 지역 분석</li>
+            <li>위도/경도 데이터를 활용한 정류장 간 거리 계산</li>
+        </ul>
+
+        <div class="footer">
+            <p>데이터 기준: 제공된 이미지 자료. 실제 데이터와 차이가 있을 수 있습니다.</p>
+        </div>
+    </div>
+
+    <script>
+        // 샘플 데이터 (이미지에서 일부 추출)
+        // 실제로는 더 많은 데이터를 입력해야 합니다.
+        const busStopData = [
+            { 회사명: "신성여객", 노선번호: "", 정류장명: "월롱시민공원", 위도: 37.7973, 경도: 126.7695, 첫차: "5:30", 막차: "23:00", 배차간격: "20~25" },
+            { 회사명: "신성여객", 노선번호: "", 정류장명: "밝은빌라.효.호텔", 위도: 37.84448, 경도: 126.7973, 첫차: "5:20", 막차: "23:30", 배차간격: "30" },
+            { 회사명: "신성여객", 노선번호: "084(와석초)", 정류장명: "운정역", 위도: 37.7253, 경도: 126.7678, 첫차: "6:00", 막차: "23:45", 배차간격: "12~24" },
+            { 회사명: "신성여객", 노선번호: "084-1", 정류장명: "운정역", 위도: 37.7253, 경도: 126.7678, 첫차: "5:30", 막차: "23:06", 배차간격: "40~50" },
+            { 회사명: "한일운수", 노선번호: "034-1", 정류장명: "교하차고지", 위도: 37.75285, 경도: 126.7425, 첫차: "5:00", 막차: "22:00", 배차간격: "60" },
+            { 회사명: "한일운수", 노선번호: "", 정류장명: "장터고개.금촌", 위도: 37.77232, 경도: 126.7335, 첫차: "5:00", 막차: "23:00", 배차간격: "8~10" },
+            { 회사명: "우리교통", 노선번호: "", 정류장명: "풀무골", 위도: 37.77172, 경도: 126.7559, 첫차: "5:00", 막차: "23:00", 배차간격: "40~50" },
+            { 회사명: "우리교통", 노선번호: "033-1", 정류장명: "탄현중학교", 위도: 37.80393, 경도: 126.7218, 첫차: "5:30", 막차: "23:10", 배차간격: "25" },
+            { 회사명: "기흥여객", 노선번호: "", 정류장명: "기흥여객차고지", 위도: 37.79095, 경도: 126.7432, 첫차: "5:20", 막차: "22:50", 배차간격: "80~105" },
+            { 회사명: "문산여객", 노선번호: "051A", 정류장명: "문산산림행정타운", 위도: 37.85647, 경도: 126.7888, 첫차: "5:30", 막차: "23:40", 배차간격: "10~15" },
+            { 회사명: "파주교통(신일)", 노선번호: "", 정류장명: "문산산림행정타운", 위도: 37.85722, 경도: 126.7891, 첫차: "5:20", 막차: "21:50", 배차간격: "60" },
+            { 회사명: "신일여객", 노선번호: "", 정류장명: "파주행복센터", 위도: 37.83058, 경도: 126.8193, 첫차: "6:25", 막차: "18:25", 배차간격: "80" }
+        ];
+
+        // 1. 샘플 데이터 테이블 채우기
+        const sampleTableBody = document.getElementById('sampleDataTable');
+        busStopData.slice(0, 5).forEach(stop => { // 처음 5개만 샘플로 표시
+            const row = sampleTableBody.insertRow();
+            row.insertCell().textContent = stop.회사명;
+            row.insertCell().textContent = stop.노선번호 || 'N/A';
+            row.insertCell().textContent = stop.정류장명;
+            row.insertCell().textContent = stop.위도;
+            row.insertCell().textContent = stop.경도;
+            row.insertCell().textContent = stop.첫차;
+            row.insertCell().textContent = stop.막차;
+            row.insertCell().textContent = stop.배차간격;
+        });
+
+        // 2. Leaflet 지도 초기화 및 마커 추가
+        // 파주시청 근처를 중심으로 지도 설정
+        const map = L.map('map').setView([37.76, 126.77], 12); // 파주시 대략적 중심 위도, 경도 및 줌 레벨
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        busStopData.forEach(stop => {
+            if (stop.위도 && stop.경도) {
+                L.marker([stop.위도, stop.경도]).addTo(map)
+                    .bindPopup(`<b>${stop.정류장명}</b><br>회사: ${stop.회사명}<br>노선: ${stop.노선번호 || '정보없음'}<br>첫차: ${stop.첫차}, 막차: ${stop.막차}`);
+            }
+        });
+
+        // 3. 회사별 정류장 수 차트 (Chart.js)
+        const companyCounts = {};
+        busStopData.forEach(stop => {
+            companyCounts[stop.회사명] = (companyCounts[stop.회사명] || 0) + 1;
+        });
+
+        const companyLabels = Object.keys(companyCounts);
+        const companyData = Object.values(companyCounts);
+
+        const ctx = document.getElementById('companyStopChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: companyLabels,
+                datasets: [{
+                    label: '운영 정류장 수',
+                    data: companyData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)',
+                        'rgba(255, 159, 64, 0.7)',
+                        'rgba(199, 199, 199, 0.7)',
+                        'rgba(83, 102, 255, 0.7)',
+                        'rgba(40, 159, 64, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(159, 159, 159, 1)',
+                        'rgba(83, 102, 255, 1)',
+                        'rgba(40, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '정류장 수'
+                        }
+                    },
+                    x: {
+                         title: {
+                            display: true,
+                            text: '버스 회사명'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false // 데이터셋이 하나이므로 범례 숨김
+                    },
+                    title: {
+                        display: true,
+                        text: '버스 회사별 운영 정류장 수',
+                        font: {
+                            size: 16
+                        }
+                    }
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
